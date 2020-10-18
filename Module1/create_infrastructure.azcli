@@ -1,0 +1,99 @@
+# create resource group
+az group create -n adventure-works-rg --location westeurope
+
+# create virtual network
+az network vnet create \
+  --name aw-vnet \
+  --resource-group adventure-works-rg \
+  --location westeurope \
+  --address-prefixes 10.0.0.0/24 10.0.1.0/24 \
+
+# create subnet
+az network vnet subnet create \
+  --name aw-vm-subnet \
+  --resource-group adventure-works-rg \
+  --vnet-name aw-vnet \
+  --address-prefix 10.0.1.0/24
+
+# create subnet
+  az network vnet subnet create \
+  --name aw-gateway-subnet \
+  --resource-group adventure-works-rg \
+  --vnet-name aw-vnet \
+  --address-prefix 10.0.0.0/24
+
+# create public ip
+az network public-ip create \
+  --resource-group adventure-works-rg \
+  --name aw-admin-ip \
+  --allocation-method dynamic \
+  --sku Basic
+
+# create public ip
+  az network public-ip create \
+  --resource-group adventure-works-rg \
+  --name aw-gateway-api \
+  --allocation-method dynamic \
+  --sku Basic
+
+# create vm1 iis
+az vm create \
+   -n aw-vm-app1 -g adventure-works-rg --image Win2012Datacenter \
+   --size Standard_B1ms --storage-sku Standard_LRS \
+   --admin-username testusername --admin-password testPassword123 \
+   --vnet-name aw-vnet --subnet aw-vm-subnet \
+  
+az vm open-port -g adventure-works-rg -n aw-vm-app1 --port '*' 
+
+# Use CustomScript extension to install IIS.
+az vm extension set \
+  --publisher Microsoft.Compute \
+  --version 1.8 \
+  --name CustomScriptExtension \
+  --vm-name aw-vm-app1 \
+  --resource-group adventure-works-rg \
+  --settings '{"commandToExecute":"powershell.exe Install-WindowsFeature -Name Web-Server"}'
+
+  # create vm2 iis
+az vm create \
+   -n aw-vm-app2 -g adventure-works-rg --image Win2012Datacenter \
+   --size Standard_B1ms --storage-sku Standard_LRS \
+   --admin-username testusername --admin-password testPassword123 \
+   --vnet-name aw-vnet --subnet aw-vm-subnet \
+      
+az vm open-port -g adventure-works-rg -n aw-vm-app2 --port '*' 
+
+# Use CustomScript extension to install IIS.
+az vm extension set \
+  --publisher Microsoft.Compute \
+  --version 1.8 \
+  --name CustomScriptExtension \
+  --vm-name aw-vm-app2 \
+  --resource-group adventure-works-rg \
+  --settings '{"commandToExecute":"powershell.exe Install-WindowsFeature -Name Web-Server"}'
+
+# create sql vm
+  az vm create \
+   -n aw-vm-sql -g adventure-works-rg --image Win2012Datacenter \
+   --size Standard_B1ms --storage-sku Standard_LRS \
+   --admin-username testusername --admin-password testPassword123 \
+   --vnet-name aw-vnet --subnet aw-vm-subnet \
+   --public-ip-address aw-admin-ip
+   
+az vm open-port -g adventure-works-rg -n aw-vm-app2 --port '*' 
+
+# create gateway
+az network application-gateway create \
+  --name aw-app-gateway \
+  --location westeurope \
+  --resource-group adventure-works-rg \
+  --capacity 2 \
+  --sku Standard_v2 \
+  --http-settings-cookie-based-affinity Enabled \
+  --public-ip-address aw-gateway-api \
+  --vnet-name aw-vnet \
+  --subnet aw-gateway-subnet \
+  --servers 20.52.146.58 20.52.144.130
+
+
+             
