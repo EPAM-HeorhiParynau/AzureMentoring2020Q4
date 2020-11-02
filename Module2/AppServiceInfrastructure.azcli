@@ -1,0 +1,11 @@
+az account set -s "Visual Studio Professional"
+
+# create resource group
+az group create -n az-webapp-rg --location westeurope
+
+# Service plan
+az appservice plan create -g az-webapp-rg -n web-app-plan --sku F1
+
+az webapp create -n az-web-app -g az-webapp-rg -p web-app-plan --runtime "aspnet|V4.7"
+
+
